@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>The senses</title>
+<style>
+  /* ====== Reset & base ====== */
+  * { box-sizing: border-box; margin:0; padding:0; }
+  :root{
+    --blue:#001DFF;
+    --blue-dark:#04032B;
+    --blue-700:#1a3a5f;
+    --blue-600:#254fba;
+    --orange:#f59e42;
+    --orange-700:#e67e22;
+    --bg-grad-1:#1a3a5f;
+    --bg-grad-2:#0d2340;
+    --white:#ffffff;
+    --green:#2ecc71;
+    --red:#e74c3c;
+    --panel:#E8EAFF;
+  }
+  body{
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* Fondo azul oscuro o gradiente */
+    background: linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+    min-height:100vh; display:flex; justify-content:center; align-items:center; color:#333; padding:10px;
+  }
+  .game-container{
+    background:var(--white); border-radius:16px; box-shadow:0 12px 24px rgba(0,0,0,.12);
+    padding:1.2rem; max-width:980px; width:100%; min-height:640px; position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  header{ text-align:center; margin-bottom:.8rem; margin-top:2rem; }
+  h1{ color:var(--blue); font-size:clamp(2rem,5.2vw,3.1rem); font-weight:900; letter-spacing:.5px; }
+  .subtitle{ color:var(--blue-700); font-size:clamp(1rem,3.5vw,1.25rem); margin-top:.25rem; }
+  .highlight-keyword{ color:var(--orange); font-weight:800; }
+
+  /* Buttons */
+  .btn{ color:#fff; border:none; padding:.75rem 1.2rem; border-radius:10px; cursor:pointer; font-weight:800;
+        transition:transform .08s ease, box-shadow .2s ease, background-color .25s ease; min-width:140px; height:48px;
+        display:inline-flex; align-items:center; justify-content:center; }
+  .btn:hover{ transform:translateY(-2px); box-shadow:0 6px 14px rgba(0,0,0,.12); }
+  .btn:active{ transform:translateY(0); }
+  .btn-primary{ background:var(--orange); }
+  .btn-primary:hover{ background:var(--orange-700); color:#fff; }
+  .btn-blue{ background:var(--blue-600); }
+  .btn-blue:hover{ filter:brightness(.9); }
+  .btn-ghost{ background:#e6f2ff; color:var(--blue-700); }
+
+  .screen{ display:none; animation:fadeIn .35s ease; }
+  .screen.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:translateY(0);} }
+
+  .game-info{ display:flex; gap:.6rem; align-items:center; justify-content:space-between; margin:.4rem 0 1rem; flex-wrap:wrap; }
+  .timer{ font-weight:900; color:var(--blue-700); font-size:clamp(.95rem,2.3vw,1.15rem); }
+  .progress-bar{ flex:1; height:10px; background:#e6f2ff; border-radius:999px; overflow:hidden; }
+  .progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--orange) 0%, var(--orange-700) 100%); transition:width .3s ease; }
+  .score{ font-weight:900; color:var(--blue-700); font-size:clamp(.9rem,2.3vw,1.1rem); }
+
+  /* Start screen */
+  .start-content{ display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; gap:1rem; padding:1rem; }
+  .advice-box{ background:var(--panel); border-left:4px solid var(--blue-700); padding:1rem 1.2rem; border-radius:12px;
+               color:var(--blue-700); max-width:760px; text-align:center; font-size:clamp(1rem,3vw,1.15rem); }
+  .start-image{ max-width: 300px; width: 100%; margin: 0 auto; }
+
+  /* Sound & help */
+  .mute-btn{ position:absolute; top:.8rem; right:4.5rem; background:var(--orange); color:#fff; border:2px solid #fff; width:38px; height:38px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; z-index:20; }
+  .mute-btn:hover{ background:var(--orange-700); }
+  .help-btn{ position:absolute; top:.8rem; right:.8rem; width:38px; height:38px; border-radius:50%; border:none; background:#9c27b0; color:#fff; font-weight:800; cursor:pointer; z-index:20; }
+
+  /* Layout */
+  .board{ display:grid; grid-template-columns:1fr; gap:.8rem; align-items:start; }
+  .panel{ background:#f8fbff; border:2px solid #d3e2ff; border-radius:12px; padding:.7rem .9rem; display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
+  .word-display-container{ display:flex; align-items:center; justify-content:center; gap:0.5rem; flex:1; }
+  .word-display{ font-size:clamp(1.2rem,4.5vw,1.8rem); font-weight:900; color:var(--blue-700); text-align:center; }
+  .btn-play-word{ background:var(--blue-600); color:#fff; border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background-color .2s; }
+  .btn-play-word:hover{ background:var(--blue-700); }
+  .btn-play-word svg{ width:20px; height:20px; }
+
+  .arrow-wrap{ display:flex; gap:.5rem; align-items:center; }
+  .arrow{ width:44px; height:44px; background:transparent; border:none; position:relative; cursor:pointer; }
+  .arrow:active{ transform:scale(.96); }
+  .arrow.left::before, .arrow.right::before{ content:""; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      width:0; height:0; border-top:12px solid transparent; border-bottom:12px solid transparent; }
+  .arrow.left::before{ border-right:18px solid var(--blue-600); margin-left:-3px; }
+  .arrow.right::before{ border-left:18px solid var(--blue-600); margin-left:3px; }
+
+  .startGameArea{ display:flex; gap:.6rem; align-items:center; justify-content:center; margin-top:.4rem; }
+
+  .stage{ background:#fff; border-radius:12px; border:2px solid #e6f2ff; padding:.6rem; box-shadow: inset 0 0 0 1px #f3f7ff; }
+  .img-wrap{ position:relative; width:100%; max-width:820px; margin:0 auto; }
+  .img-wrap img{ display:block; width:100%; height:auto; border-radius:10px; user-select:none; -webkit-user-drag:none; }
+
+  /* --- Selection squares visual base: square markers. --- */
+  .marker{
+    position:absolute;
+    background:transparent; /* FONDO TRANSPARENTE */
+    border-radius:0;
+    box-shadow:none;
+    transform:translate(-50%,-50%);
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:auto;
+    /* BASE INVISIBLE: JS va a sobreescribir border-width con 10px dinámico y el color */
+    border: 0px solid transparent; 
+  }
+  /* Resalta el BORDE en verde y mantiene el fondo transparente */
+  .marker.correct{ 
+    border-color:var(--green); 
+    background:transparent; 
+  }
+  /* Resalta el BORDE en verde (modo reconocimiento) */
+  .marker.target-green{ 
+    background:transparent; 
+    border-color:var(--green); 
+  }
+  /* Resalta el BORDE en rojo (al revelar el correcto tras un error) */
+  .marker.reveal-red{ 
+    background:transparent; 
+    border-color:var(--red); 
+  }
+  /* Resalta el BORDE en rojo temporalmente (al clickar incorrecto) */
+  .marker.clicked-temp { 
+    transform: translate(-50%, -50%) scale(.95); 
+    transition: transform .12s ease; 
+    background: transparent; 
+    border-color: var(--red);
+  }
+  /* Marcador al clickar correcto */
+  .marker.correct {
+    background: transparent; 
+    border-color: var(--green);
+  }
+  .overlay-click{ position:absolute; inset:0; }
+
+  /* Results screen */
+  .results{ display:flex; flex-direction:column; align-items:center; gap:.6rem; text-align:center; min-height:calc(100vh - 180px); }
+  .final-title{ color:var(--blue-dark); font-weight:900; } /* Título final azul oscuro */
+  .big-score{ font-size:clamp(2.2rem,6vw,3.4rem); color:var(--blue-600); font-weight:900; }
+  .score-title{ font-size:1.0rem; color:var(--blue-700); margin-top:1rem; }
+  .final-time{ color:var(--blue-700); }
+  .trophy{ font-size:clamp(4rem,10vw,6rem); margin:.2rem 0; color:var(--orange); animation:bounce 1s ease infinite; }
+  @keyframes bounce { 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-8px);} }
+  .credit{ color:var(--blue-700); margin-top:1rem; }
+
+  /* final message size (slightly smaller than the final title) */
+  #finalMsg {
+    font-size: clamp(1.6rem, 3.8vw, 2.4rem);
+    font-weight: 800;
+    color: var(--blue-700);
+    margin-top: 0.6rem;
+  }
+
+  /* School logo responsive */
+  .school-logo {
+    display: block;
+    width: 160px;
+    max-width: 28%;
+    height: auto;
+    margin-top: 0.8rem;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+  @media (max-width: 899px) { .school-logo { width: 140px; max-width: 160px; } }
+  @media (max-width: 420px) {
+    .school-logo { width: 110px; max-width: 40%; margin-top: 0.6rem; }
+    .results { gap: 0.4rem; padding: 0 0.6rem; }
+    #finalMsg { font-size: clamp(1.2rem, 4.2vw, 1.8rem); }
+    .big-score { font-size: clamp(1.8rem, 6vw, 2.6rem); }
+  }
+  @media (max-width: 320px) {
+    .school-logo { width: 90px; max-width: 48%; }
+    #finalMsg { font-size: clamp(1.1rem, 4.6vw, 1.6rem); }
+  }
+
+  .confetti{ position:fixed; width:10px; height:10px; border-radius:50%; animation: confetti-fall 3s linear forwards; z-index:999; }
+  @keyframes confetti-fall{ 0%{ transform:translate(0, -20px) rotate(0); opacity:1;} 100%{ transform:translate(var(--tx), var(--ty)) rotate(360deg); opacity:0; } }
+
+  /* Loading */
+  .loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    flex-direction: column;
+  }
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--orange);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .loading-text { color: white; font-size: 1.2rem; text-align: center; }
+
+  /* Start button style: orange bg, white text (Start the game) */
+  #startGameBtn {
+    background: var(--orange);
+    color: var(--white);
+    border: 2px solid var(--orange);
+    font-weight:900;
+    padding:.6rem 1rem;
+    border-radius:10px;
+  }
+  #startGameBtn:hover { background: var(--orange-700); border-color: var(--orange-700); }
+
+  @media (min-width:900px){ .board{ grid-template-columns: 360px 1fr; align-items:start; } .panel{ order:1; } .stage{ order:2; } }
+  @media (max-width:899px){
+    header{ margin-top:1.6rem; }
+    .board{ grid-template-columns:1fr; }
+    .panel{ display:flex; flex-direction:row; align-items:center; justify-content:space-between; padding:.6rem; }
+    .word-display-container{ order:0; width:100%; margin-bottom:.6rem; }
+    .stage{ order:1; }
+    .arrow{ width:40px; height:40px; }
+  }
+  @media (max-width:420px){ .btn{ min-width:110px; padding:.6rem .9rem; height:44px; } }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <button class="mute-btn" id="muteBtn" title="Mute/Unmute">🔊</button>
+
+  <section class="screen active" id="startScreen" aria-labelledby="title">
+    <header>
+      <h1 id="title">The senses</h1>
+      <div class="subtitle">Identify the <span class="highlight-keyword">five senses</span>.</div>
+    </header>
+    <div class="start-content">
+      <div class="advice-box" role="note" aria-live="polite">
+        Listen to the <span class="highlight-keyword">senses</span> and <span class="highlight-keyword">match</span>.
+        <div style="margin-top:.5rem; font-weight:800; text-align:center;">Good luck!</div>
+      </div>
+      <button class="btn btn-primary" id="playBtn">Play</button>
+      <img class="start-image" src="https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Ni%C3%B1os.png" alt="Kids learning">
+    </div>
+  </section>
+
+  <section class="screen" id="gameScreen" aria-live="polite">
+    <button class="help-btn" id="helpBtn" title="Ayuda">?</button>
+    <header>
+      <h1>The five senses</h1>
+    </header>
+
+    <div class="game-info">
+      <div class="timer" id="timer">00:00</div>
+      <div class="progress-bar" aria-label="Progress"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="score">Score: <span id="score">0</span>/<span id="totalQuestions">100</span></div>
+    </div>
+
+    <div class="board">
+      <div class="panel" aria-live="polite">
+        <div class="arrow-wrap" id="prevPairWrap" style="display:flex;">
+          <button class="arrow left" id="prevPair" title="Previous" aria-label="Previous"></button>
+        </div>
+
+        <div class="word-display-container" id="wordDisplayContainer">
+          <div class="word-display" id="wordDisplay">—</div>
+          <button class="btn-play-word" id="playWordBtn" title="Play audio" aria-label="Play audio">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 5v14l11-7z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="arrow-wrap" id="nextPairWrap" style="display:flex;">
+          <button class="arrow right" id="nextPair" title="Next" aria-label="Next"></button>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="img-wrap" id="imgWrap">
+          <img id="bodyImg" src="" alt="Senses to identify">
+          <div class="overlay-click" id="overlayClick" aria-hidden="true"></div>
+        </div>
+
+        <div class="startGameArea">
+          <button class="" id="startGameBtn">Start the game</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="resultsScreen">
+    <header>
+      <h1 class="final-title">The senses</h1>
+    </header>
+    <div class="results">
+      <div id="trophyBox" style="display:none;">
+        <div class="trophy">🏆</div>
+      </div>
+
+      <div class="score-title">Score</div>
+      <div class="big-score" id="finalScore">0</div> 
+      <div class="final-time">Time: <span id="finalTime">00:00</span></div>
+      <div id="finalMsg" class="subtitle"></div>
+      <button class="btn btn-primary" id="backToMenuBtn" style="background:var(--orange);">Back to menu</button>
+      <span class="credit">Created by Manuel J. Ventura</span>
+      <img class="school-logo" src="https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Siurot.png" alt="School logo" />
+    </div>
+  </section>
+</div>
+
+<div class="loading-indicator" id="loadingIndicator" style="display: none;">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading audios...</div>
+</div>
+
+<div id="helpModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; justify-content:center; align-items:center; padding:1rem;">
+  <div style="background:#fff; border-radius:12px; max-width:680px; width:100%; padding:1.2rem 1.2rem; box-shadow:0 10px 24px rgba(0,0,0,.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:.5rem; margin-bottom:.8rem;">
+      <h3 style="color:var(--blue-700);">Cómo jugar</h3>
+      <button class="btn-ghost" id="closeHelp" style="border-radius:8px; padding:.4rem .7rem; height:auto; min-width:auto;">Cerrar</button>
+    </div>
+    <div style="line-height:1.55; color:#333;">
+      <p><strong style="color: #001A73; font-weight: bold;">Pulsa el botón del reproductor</strong> para escuchar el audio y <strong style="color: #001A73; font-weight: bold;">señala</strong> la imagen correspondiente.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/************** Data & audio files **************/
+
+/* Calcula centro (x,y) y dimensiones (w,h) desde esquina superior izquierda (x1,y1) e inferior derecha (x2,y2) */
+function calculateMarkerProps(x1, y1, x2, y2) {
+    const w = x2 - x1;
+    const h = y2 - y1;
+    const x = x1 + w / 2;
+    const y = y1 + h / 2;
+    return { x, y, w, h };
+}
+
+/* Data for the two levels/screens */
+const LEVELS = [
+  {
+    id: 1,
+    // URL de imagen de la pantalla 1
+    image: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Sentidos3.png',
+    originalW: 986, 
+    originalH: 682, 
+    recognition: true, // Pantalla 1 tiene ronda de reconocimiento
+    pairs: [
+      // Index 0
+      { word: 'Sight',   ...calculateMarkerProps(32, 40, 308, 315), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Sight.mp3' },
+      // Index 1
+      { word: 'Hearing', ...calculateMarkerProps(670, 40, 945, 316), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Hearing.mp3' },
+      // Index 2
+      { word: 'Smell',   ...calculateMarkerProps(181, 365, 459, 640), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Smell.mp3' },
+      // Index 3
+      { word: 'Taste',   ...calculateMarkerProps(352, 40, 628, 315), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Taste.mp3' },
+      // Index 4
+      { word: 'Touch',   ...calculateMarkerProps(510, 365, 785, 641), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Touch.mp3' }
+    ]
+  },
+  {
+    id: 2,
+    image: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Sentidos2.png',
+    originalW: 1109,
+    originalH: 732,
+    recognition: false, // Pantalla 2 NO tiene ronda de reconocimiento
+    pairs: [
+      { word: 'Sight', ...calculateMarkerProps(44, 38, 348, 341), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Sight.mp3' },
+      { word: 'Hearing', ...calculateMarkerProps(576, 391, 881, 695), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Hearing.mp3' },
+      { word: 'Smell', ...calculateMarkerProps(221, 391, 527, 695), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Smell.mp3' },
+      { word: 'Taste', ...calculateMarkerProps(396, 38, 702, 343), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Taste.mp3' },
+      { word: 'Touch', ...calculateMarkerProps(751, 40, 1058, 344), audio: 'https://raw.githubusercontent.com/ManuelVS8/Audios-juegos-SCIENCE/main/2Sentidos/Touch.mp3' }
+    ]
+  }
+];
+
+/* Effects (updated to raw links) */
+const soundFiles = {
+  completed: 'https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Completado.mp3',
+  correct:   'https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Correcto.mp3',
+  victory:   'https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Termin%C3%A9.mp3',
+  error:     'https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Error.mp3',
+  tap:       'https://raw.githubusercontent.com/ManuelVS8/Efectos_audio/main/Tap.mp3'
+};
+
+const sounds = {}; let isMuted = false; let audioUnlocked = false;
+Object.entries(soundFiles).forEach(([k, url])=>{ const a=new Audio(); a.src=url; a.preload='auto'; sounds[k]=a; });
+
+const wordAudios = {};
+let currentWordAudio = null;
+let pendingAudioTimeout = null;
+let audiosPrecargados = false;
+
+/* Preload function */
+function preloadWordAudios() {
+  console.log("Precargando audios de palabras...");
+  const uniqueAudios = new Map(); 
+  LEVELS.forEach(level => {
+    level.pairs.forEach(pair => {
+      if (!uniqueAudios.has(pair.word)) {
+        uniqueAudios.set(pair.word, pair.audio);
+      }
+    });
+  });
+
+  const allWords = Array.from(uniqueAudios.keys());
+  let loadedCount = 0;
+  let errorCount = 0;
+
+  return new Promise((resolve) => {
+    if (allWords.length === 0) {
+      audiosPrecargados = true;
+      resolve();
+      return;
+    }
+    allWords.forEach((word) => {
+      const url = uniqueAudios.get(word);
+      try {
+        const audio = new Audio();
+        audio.src = url;
+        audio.preload = 'auto';
+        audio.crossOrigin = 'anonymous';
+        audio.addEventListener('canplaythrough', () => {
+          loadedCount++;
+          if (loadedCount + errorCount === allWords.length) {
+            audiosPrecargados = true;
+            resolve();
+          }
+        }, { once: true });
+        audio.addEventListener('error', (e) => {
+          errorCount++;
+          console.error(`Error al cargar audio para ${word}:`, e);
+          if (loadedCount + errorCount === allWords.length) {
+            audiosPrecargados = true;
+            resolve();
+          }
+        }, { once: true });
+        wordAudios[word] = audio;
+      } catch(e) {
+        errorCount++;
+        console.error(`Error al crear audio para ${word}:`, e);
+        if (loadedCount + errorCount === allWords.length) {
+          audiosPrecargados = true;
+          resolve();
+        }
+      }
+    });
+  });
+}
+
+/* unlockAudio helper */
+function unlockAudio(){
+  if (audioUnlocked) return;
+  try{
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    g.gain.value = 0.0001;
+    o.start();
+    o.stop(ctx.currentTime + 0.02);
+    audioUnlocked = true;
+  } catch(e){
+    console.error("Error al desbloquear audio:", e);
+  }
+}
+
+/* play effect */
+function play(name){
+  if(!audioUnlocked) { unlockAudio(); }
+  if(isMuted) return;
+  const a = sounds[name];
+  if(!a) return;
+  try{
+    a.currentTime = 0;
+    const p = a.play();
+    if (p && p.catch) p.catch(err => console.warn('Effect playback failed:', err));
+  } catch(e){
+    console.log('Audio play error', e);
+  }
+}
+function reproducirSonidoCorrecto(){ play('correct'); }
+function reproducirSonidoError(){ play('error'); }
+function reproducirSonidoCompletado(){ play('completed'); }
+function reproducirSonidoVictoria(){ play('victory'); }
+function reproducirSonidoTap(){ play('tap'); }
+
+/* play word audio */
+function playWordAudio(word, delay = 0) {
+  if (pendingAudioTimeout) { clearTimeout(pendingAudioTimeout); pendingAudioTimeout = null; }
+  if (!audioUnlocked) unlockAudio();
+  if (isMuted) return;
+  const audio = wordAudios[word];
+  if (!audio) {
+    console.error(`No audio found for "${word}"`);
+    return;
+  }
+  try {
+    if (currentWordAudio && !currentWordAudio.paused && currentWordAudio !== audio) {
+      currentWordAudio.pause();
+      currentWordAudio.currentTime = 0;
+    }
+    currentWordAudio = audio;
+    const playAudio = () => {
+      try {
+        audio.currentTime = 0;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(()=> {}).catch(error=>{
+            console.error(`Error playing "${word}":`, error);
+          });
+        }
+      } catch(e) { console.error('Error in playAudio:', e); }
+    };
+    if (delay > 0) pendingAudioTimeout = setTimeout(playAudio, delay);
+    else playAudio();
+  } catch(e) {
+    console.error('Error trying to play audio:', e);
+  }
+}
+
+/************** State & helpers **************/
+const el = (id)=>document.getElementById(id);
+const bodyImg = el('bodyImg');
+const imgWrap = el('imgWrap');
+const overlayClick = el('overlayClick');
+const wordDisplay = el('wordDisplay');
+const playWordBtn = el('playWordBtn');
+const progressFill = el('progressFill');
+const timerEl = el('timer');
+const scoreEl = el('score');
+const totalQuestionsEl = el('totalQuestions');
+const startGameBtn = document.getElementById('startGameBtn');
+const loadingIndicator = el('loadingIndicator');
+
+let currentLevelIndex = 0;  // 0 for level 1, 1 for level 2
+let currentLevelData = LEVELS[0];
+let recognitionIndex = 0;   // index used during recognition round (Level 1 only)
+let recognitionSequence = []; // AÑADIDO: Secuencia de índices fijos para el modo reconocimiento
+let playOrder = [];         // randomized order for current play round
+let playIndex = 0;          // index into playOrder
+let answered = new Set();
+let correctCount = 0;       // Total correct answers across all levels (max 10)
+let totalQuestions = LEVELS.reduce((sum, level) => sum + level.pairs.length, 0); // Total questions (10)
+let levelCorrectCount = 0;  // Correct answers for the current level
+let timerInt = null; let elapsed = 0;
+let markers = [];
+let mode = 'recognition';   // 'recognition' | 'play' | 'finished'
+let userInteracted = false;
+
+/* Utilities */
+function fmtTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
+function startTimer(){ clearInterval(timerInt); timerInt = setInterval(()=>{ elapsed++; timerEl.textContent = fmtTime(elapsed); },1000); }
+function stopTimer(){ clearInterval(timerInt); }
+/* Score update: Correct Answers (max 10) * 10 = Max 100 points */
+function updateProgress(){ 
+  const totalAnswered = correctCount + (totalQuestions - currentLevelData.pairs.length) + levelCorrectCount;
+  const pct = (totalAnswered / totalQuestions)*100; 
+  progressFill.style.width = pct + '%'; 
+  
+  const currentCorrect = correctCount + levelCorrectCount;
+  const currentScore = currentCorrect * 10; // CÁLCULO: Correctas * 10
+  
+  scoreEl.textContent = currentScore; // Muestra el puntaje (0-100)
+  totalQuestionsEl.textContent = '100'; // Muestra el total (100 puntos)
+}
+
+/* PLACE MARKERS */
+function placeMarkers(){
+  markers.forEach(m=>m.remove()); markers = [];
+
+  const rect = bodyImg.getBoundingClientRect();
+  const scaleX = rect.width / currentLevelData.originalW;
+  const scaleY = rect.height / currentLevelData.originalH;
+  const uniformScale = Math.min(scaleX, scaleY);
+  const markersData = currentLevelData.pairs;
+
+  markersData.forEach((p, idx)=>{
+    const x = p.x * scaleX;
+    const y = p.y * scaleY;
+    const w = p.w * scaleX;
+    const h = p.h * scaleY;
+
+    const div = document.createElement('div');
+    div.className = 'marker';
+    
+    div.style.width = w + 'px';
+    div.style.height = h + 'px';
+
+    /* BASE DE GROSOR: 10 (VERY THICK) */
+    const borderPx = Math.max(2, Math.round(10 * uniformScale)); 
+    /* Borde del grosor dinámico de 10px, pero invisible (transparent) por defecto */
+    div.style.border = `${borderPx}px solid transparent`; 
+    div.style.left = x + 'px';
+    div.style.top  = y + 'px';
+    div.dataset.idx = idx;
+    div.tabIndex = 0;
+    div.setAttribute('role','button');
+    div.setAttribute('aria-label', `Marker for ${p.word}`);
+    div.addEventListener('click', onMarkerClick);
+    div.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); onMarkerClick.call(div, e); }});
+    imgWrap.appendChild(div);
+    markers.push(div);
+  });
+}
+
+function refreshMarkersStyles(){
+  const rect = bodyImg.getBoundingClientRect();
+  const scaleX = rect.width / currentLevelData.originalW;
+  const scaleY = rect.height / currentLevelData.originalH;
+  const uniformScale = Math.min(scaleX, scaleY);
+
+  /* BASE DE GROSOR: 10 (VERY THICK) */
+  const borderPx = Math.max(2, Math.round(10 * uniformScale)); 
+
+  currentLevelData.pairs.forEach((p, idx)=>{
+    const div = markers[idx];
+    if (div) {
+        div.style.left = (p.x * scaleX) + 'px';
+        div.style.top  = (p.y * scaleY) + 'px';
+        div.style.width = (p.w * scaleX) + 'px';
+        div.style.height = (p.h * scaleY) + 'px';
+        
+        // Determina el color del borde: Verde/Rojo si está destacado, Transparente si no
+        const hasGreen = div.classList.contains('target-green') || div.classList.contains('correct');
+        const hasRed = div.classList.contains('reveal-red') || div.classList.contains('clicked-temp');
+        const borderColor = hasGreen ? 'var(--green)' : hasRed ? 'var(--red)' : 'transparent';
+        
+        // Aplica el grosor dinámico (10px) pero con el color apropiado
+        div.style.border = `${borderPx}px solid ${borderColor}`;
+    }
+  });
+}
+
+/************** Recognition & Play logic **************/
+
+/* Setup for a new level */
+function setupLevel(){
+  currentLevelData = LEVELS[currentLevelIndex];
+  bodyImg.src = currentLevelData.image;
+  levelCorrectCount = 0;
+  answered.clear();
+  playOrder = []; playIndex = 0; 
+  markers.forEach(m=> m.remove()); markers = [];
+
+  // Wait for image to load before placing markers
+  bodyImg.onload = () => {
+    placeMarkers();
+    if (currentLevelData.recognition) {
+        mode = 'recognition';
+        // MODIFICADO: Definir la secuencia de reconocimiento fija para el Nivel 1 (index 0)
+        if (currentLevelIndex === 0) {
+            // Orden: Sight(0), Taste(3), Hearing(1), Smell(2), Touch(4)
+            recognitionSequence = [0, 3, 1, 2, 4]; 
+        } else {
+            // Por defecto, usa el orden secuencial (aunque solo el Nivel 1 está en modo reconocimiento)
+            recognitionSequence = [...Array(currentLevelData.pairs.length).keys()];
+        }
+        if (startGameBtn) startGameBtn.style.display = 'flex';
+        el('prevPairWrap').style.display = 'flex';
+        el('nextPairWrap').style.display = 'flex';
+        recognitionIndex = 0;
+        setRecognitionIndex(0);
+    } else {
+        mode = 'play';
+        if (startGameBtn) startGameBtn.style.display = 'none';
+        el('prevPairWrap').style.display = 'none';
+        el('nextPairWrap').style.display = 'none';
+        beginPlay(); 
+    }
+    updateProgress();
+  };
+  if (bodyImg.complete) bodyImg.onload(); 
+}
+
+/* Recognition: set recognitionIndex, show word, play audio, highlight corresponding marker green */
+function setRecognitionIndex(i){
+  if(typeof i === 'undefined' || i === null) return;
+  
+  const sequenceLength = recognitionSequence.length;
+  // Asegura que el índice de la secuencia esté dentro del rango
+  recognitionIndex = ((i % sequenceLength) + sequenceLength) % sequenceLength;
+  
+  // OBTENER EL ÍNDICE REAL de la palabra del array de pares
+  const actualPairIndex = recognitionSequence[recognitionIndex];
+  const pair = currentLevelData.pairs[actualPairIndex]; 
+  if(!pair) return;
+  
+  wordDisplay.textContent = pair.word;
+  playWordAudio(pair.word, 0);
+
+  markers.forEach(m => m.classList.remove('target-green'));
+  // Marca el marcador usando el índice real
+  const m = markers[actualPairIndex]; 
+  if(m) m.classList.add('target-green');
+  refreshMarkersStyles(); // Ensure border color update
+}
+
+/* Begin play round (called when Start the game pressed or auto in Level 2) */
+function beginPlay(){
+  mode='play';
+  if (!timerInt) {
+    elapsed = 0;
+    timerEl.textContent = '00:00';
+    startTimer();
+  }
+
+  // MANTIENE ORDEN ALEATORIO: playOrder se baraja cada vez
+  playOrder = shuffle([...Array(currentLevelData.pairs.length).keys()]);
+  playIndex = 0;
+  answered.clear();
+  levelCorrectCount = 0; 
+
+  markers.forEach(m=> m.classList.remove('target-green','reveal-red','correct'));
+  refreshMarkersStyles(); // Reset border colors to transparent
+  el('prevPairWrap').style.display = 'none';
+  el('nextPairWrap').style.display = 'none';
+  if(startGameBtn) startGameBtn.style.display = 'none';
+  
+  setWordDisplayByIndex(playOrder[playIndex], 500); 
+  updateProgress();
+}
+
+/* setWordDisplayByIndex for play mode */
+function setWordDisplayByIndex(i, delay = 500){
+  if (typeof i === 'undefined' || i === null) return;
+  const pair = currentLevelData.pairs[i];
+  if(!pair) return;
+  wordDisplay.textContent = pair.word;
+  playWordAudio(pair.word, delay);
+}
+
+/* onMarkerClick for play mode */
+function onMarkerClick(e){
+  if(mode !== 'play') return;
+  const idxClicked = +this.dataset.idx;
+  const currentIdx = playOrder[playIndex];
+  if(answered.has(currentIdx)) return;
+
+  if (currentWordAudio) { currentWordAudio.pause(); currentWordAudio.currentTime = 0; currentWordAudio = null; }
+  if (pendingAudioTimeout) { clearTimeout(pendingAudioTimeout); pendingAudioTimeout = null; }
+
+  const rightMarker = markers[currentIdx];
+  
+  if(idxClicked === currentIdx){
+    // Correct
+    this.classList.add('correct');
+    reproducirSonidoCorrecto();
+    levelCorrectCount++; updateProgress();
+    refreshMarkersStyles();
+    setTimeout(() => {
+      this.classList.remove('correct');
+      refreshMarkersStyles();
+    }, 500); 
+  } else {
+    // Incorrect
+    if (rightMarker) rightMarker.classList.add('reveal-red'); 
+    this.classList.add('clicked-temp');
+    reproducirSonidoError();
+    refreshMarkersStyles();
+
+    setTimeout(()=> {
+      this.classList.remove('clicked-temp');
+      if (rightMarker) rightMarker.classList.remove('reveal-red');
+      refreshMarkersStyles();
+    }, 500);
+  }
+  
+  answered.add(currentIdx); 
+
+  // Next step
+  if(answered.size === currentLevelData.pairs.length) { 
+    correctCount += levelCorrectCount; 
+    
+    if (currentLevelIndex < LEVELS.length - 1) {
+      currentLevelIndex++;
+      setupLevel(); 
+    } else {
+      finishGame(); 
+    }
+  }
+  else {
+    playIndex++;
+    if (playIndex >= playOrder.length) playIndex = 0;
+    
+    // Find next unanswered pair
+    while (answered.has(playOrder[playIndex])) {
+        playIndex++;
+        if (playIndex >= playOrder.length) playIndex = 0; 
+        if (playIndex === 0) break;
+    }
+
+    setWordDisplayByIndex(playOrder[playIndex], 500); 
+  }
+}
+
+/* Finish game */
+function finishGame(){
+  stopTimer();
+  mode='finished';
+  
+  const totalCorrect = correctCount; // Max 10
+  const finalScorePoints = totalCorrect * 10; // CÁLCULO: Max 100 puntos
+
+  el('gameScreen').classList.remove('active');
+  el('resultsScreen').classList.add('active');
+  
+  // Muestra el puntaje final (0-100)
+  el('finalScore').textContent = finalScorePoints; 
+  el('finalTime').textContent = fmtTime(elapsed);
+  
+  // Lógica de trofeo/victoria basada en 100 puntos
+  el('trophyBox').style.display = (finalScorePoints===100) ? 'block' : 'none';
+  const msg = (finalScorePoints===100) ? 'Excellent! Perfect score!' : 'Well done! Keep practising!';
+  el('finalMsg').textContent = msg;
+  
+  if(finalScorePoints===100){ reproducirSonidoVictoria(); spawnConfetti(); } else { reproducirSonidoCompletado(); }
+}
+
+/* helpers */
+function shuffle(a){ const arr=[...a]; for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function spawnConfetti(){ for(let i=0;i<120;i++){ setTimeout(()=>{ const c=document.createElement('div'); c.className='confetti'; const x=Math.random()*window.innerWidth; const ty=window.innerHeight+20; const tx=(Math.random()-.5)*160; const colors=['#ff595e','#1982c4','#6a4c93','#ffca3a','#8ac926','#ff924c','#00c2ff']; c.style.left=x+'px'; c.style.top='-10px'; c.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)]; const size=6+Math.random()*8; c.style.width=size+'px'; c.style.height=size+'px'; c.style.setProperty('--tx', tx+'px'); c.style.setProperty('--ty', ty+'px'); document.body.appendChild(c); setTimeout(()=>c.remove(), 3200); }, i*18); } }
+
+/************** Routing & Events **************/
+/* gotoStart: reset everything and show start screen */
+function gotoStart(){
+  el('resultsScreen').classList.remove('active');
+  el('gameScreen').classList.remove('active');
+  el('startScreen').classList.add('active');
+
+  currentLevelIndex = 0;
+  recognitionIndex = 0;
+  playOrder = []; playIndex = 0; answered.clear(); 
+  correctCount = 0; levelCorrectCount = 0;
+  elapsed = 0; timerEl.textContent = '00:00'; progressFill.style.width = '0%'; 
+  scoreEl.textContent='0'; // Reset score display
+  totalQuestionsEl.textContent = '100'; // Reset total display
+  stopTimer();
+
+  mode = 'recognition';
+  markers.forEach(m=> m.classList.remove('target-green','reveal-red','correct'));
+  refreshMarkersStyles(); // Ensure markers are transparent
+  if (startGameBtn) startGameBtn.style.display = 'flex';
+  el('prevPairWrap').style.display = 'flex';
+  el('nextPairWrap').style.display = 'flex';
+  userInteracted = false;
+  if (currentWordAudio) { currentWordAudio.pause(); currentWordAudio.currentTime = 0; currentWordAudio = null; }
+  if (pendingAudioTimeout) { clearTimeout(pendingAudioTimeout); pendingAudioTimeout = null; }
+}
+
+/* track user interactions to unlock audio */
+function trackUserInteraction() {
+  if (!userInteracted) { userInteracted = true; unlockAudio(); }
+}
+
+/* Play button on START SCREEN */
+el('playBtn').addEventListener('click', async ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  unlockAudio();
+
+  loadingIndicator.style.display = 'flex';
+  loadingIndicator.querySelector('.loading-text').textContent = "Loading audios...";
+  el('playBtn').disabled = true;
+
+  try {
+    if (!audiosPrecargados) {
+      await preloadWordAudios();
+    }
+
+    el('startScreen').classList.remove('active');
+    el('gameScreen').classList.add('active');
+    
+    setupLevel();
+
+  } catch (error) {
+    console.error("Error during audio preload:", error);
+    el('startScreen').classList.remove('active');
+    el('gameScreen').classList.add('active');
+    setupLevel(); 
+  } finally {
+    loadingIndicator.style.display = 'none';
+    el('playBtn').disabled = false;
+  }
+});
+
+/* Start the round when the startGameBtn is pressed (Level 1 only) */
+if (startGameBtn) {
+  startGameBtn.addEventListener('click', (e)=>{
+    trackUserInteraction();
+    reproducirSonidoTap();
+    startGameBtn.style.display = 'none';
+    el('prevPairWrap').style.display = 'none';
+    el('nextPairWrap').style.display = 'none';
+    beginPlay();
+  });
+}
+
+/* Prev/Next behavior:
+   - In recognition mode: navigate recognitionIndex and play audios, highlight correct marker green
+*/
+const prevPair = el('prevPair');
+const nextPair = el('nextPair');
+if (prevPair) prevPair.addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  if(mode === 'recognition'){
+    setRecognitionIndex(recognitionIndex - 1);
+  }
+});
+if (nextPair) nextPair.addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  if(mode === 'recognition'){
+    setRecognitionIndex(recognitionIndex + 1);
+  }
+});
+
+/* Play word when button pressed (immediate) */
+playWordBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  trackUserInteraction();
+  const currentWord = wordDisplay.textContent;
+  if (!audioUnlocked) unlockAudio();
+  playWordAudio(currentWord, 0); // 0ms delay
+});
+
+/* Back to menu (results screen) */
+el('backToMenuBtn').addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  gotoStart();
+});
+
+/* Help modal events */
+el('helpBtn').addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  el('helpModal').style.display='flex'; 
+});
+el('closeHelp').addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  reproducirSonidoTap();
+  el('helpModal').style.display='none'; 
+});
+el('helpModal').addEventListener('click', (e)=>{ if(e.target===el('helpModal')) el('helpModal').style.display='none'; });
+
+/* Mute button */
+el('muteBtn').addEventListener('click', ()=>{ 
+  trackUserInteraction();
+  isMuted = !isMuted; 
+  el('muteBtn').textContent = isMuted ? '🔇' : '🔊'; 
+  if (isMuted && currentWordAudio) { currentWordAudio.pause(); currentWordAudio.currentTime = 0; }
+  if (pendingAudioTimeout) { clearTimeout(pendingAudioTimeout); pendingAudioTimeout = null; }
+});
+
+/* Unlock audio on any interaction */
+document.addEventListener('click', trackUserInteraction, { once: false });
+document.addEventListener('touchstart', trackUserInteraction, { once: false });
+document.addEventListener('keydown', trackUserInteraction, { once: false });
+
+/* Keep markers aligned on resize */
+window.addEventListener('resize', refreshMarkersStyles);
+
+/* Initial setup */
+gotoStart(); // Initialize to start screen
+</script>
+</body>
+</html>
